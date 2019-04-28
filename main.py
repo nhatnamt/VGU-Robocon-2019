@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-## Khai báo các thư viện được sử dụng
 import websocket
 import json
 import ssl
 import time
 import urllib.request
 from pathlib import Path
+import numpy as np
+import numpy.linalg as lin
+import math
+
+## Tinh goc giua 2 vecto
+def vAngle(v1,v2):
+    Ang = math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
+    Ang = math.degrees(Ang)
+    if Ang > 180 :   
+        return(360-Ang)
+    else :
+        return(Ang)
 
 ## Cài đặt và trả về thông tin cho giao thức mã hoá HTTPS
 def makeSSLContext(ca, crt, key):
@@ -20,7 +31,6 @@ def makeSSLContext(ca, crt, key):
 
     return sslCTX
 
-
 ## Trả về chuỗi JSON chứa thông tin đăng nhâp
 def makeJSONCredentials(username, password):
     creds = {
@@ -30,7 +40,6 @@ def makeJSONCredentials(username, password):
 
     return json.dumps(creds).encode("utf-8")
 
-
 ## Cài đặt và trả về thông tin của yêu cầu HTTPS
 def makeRequestHeader(url, contentType, content):
     req = urllib.request.Request(url)
@@ -39,7 +48,6 @@ def makeRequestHeader(url, contentType, content):
     req.add_header('Content-Length', len(content))
 
     return req
-
 
 ## Gửi yêu cầu đăng nhập và trả về mã xác thực
 def getToken(url, username, password,
@@ -62,12 +70,7 @@ def getToken(url, username, password,
 
     return respBodyJSON["token"]
 
-
 # Đăng nhập và nhận dữ liệu
-
-
-## Cài đặt thông tin của giao thức mã hoá cho Websocket
-
 # Đường dẫn đến các tập tin nhận từ BTC
 CA_CRT = str(Path("cacert.pem"))
 CRT = str(Path("clientcert.pem"))
@@ -80,12 +83,9 @@ sslopt = {
     'ca_certs': CA_CRT,
 }
 
-
 ## Nhận mã xác thực và thêm mã xác thực vào thông tin yêu cầu Websocket
-
-# Tên địa chỉ server (thay đổi vào ngày thi đấu)
+# Server name & port 
 HOST = "test.tunglevo.com"
-# Tên cổng kết nối (thay đổi vào ngày thi đấu)
 PORT = 4433
 
 url = 'https://%s:%s/subscribe' % (HOST, PORT)
@@ -98,7 +98,6 @@ header = {
     'Authorization': 'Bearer %s' % (token)
 }
 
-
 ## Thiết lập kết nối Websocket và bắt đầu nhận dữ liệu
 url = 'wss://%s:%s/data' % (HOST, PORT)
 ws = websocket.create_connection(url,
@@ -108,6 +107,14 @@ ws = websocket.create_connection(url,
 while True:
     msg = ws.recv()
     packet = json.loads(msg.decode('utf-8'))
-    print(packet)
+    data = (packet['data'])
+    with open("out.txt", 'a') as outt:
+        #outt.writelines(str(thisTime)+'\n') #thoi gian   
+        for i in range(len(data)):
+            outt.write(str(data[i]['name']) + ' ')
+            outt.write(str(data[i]['position']) + ' ')
+            outt.write(str(data[i]['dimension']) + '\n')
+            outt.write(str(vAngle(data[i]['dimension'],[1,0]))+'\n') # Tinh goc so voi Ox
+            outt.write('\n')
     time.sleep(1)
     ws.send(json.dumps({'finished': True}).encode('utf-8'))

@@ -1,0 +1,1 @@
+Muon chay thu thi them file out.txt vao thu muc
