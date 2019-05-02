@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import numpy as np
+import matplotlib.pyplot as plt
 import websocket
 import json
 import ssl
 import time
 import urllib.request
 from pathlib import Path
-import numpy as np
-import numpy.linalg as lin
 import math
+from IPython.display import HTML
+import matplotlib.animation as animation
+
+#Vo thi nho sua vi tri
+points = [0]*4 + [5]*7 + [10]*4 + [15]*3 + [20]*2 + [25]*2 + [30]*2 + [-20] + [50]*3
+colors = ['red']*4 +['#bdf300']*7 + ['#5fe73a']*4 + ['#00d06a']*3 + ['#008c8b']*2 + ['#29678f']*2 + ['#41408e']*2 + ['k'] + ['#4f1186']*3
+shapes = ['v']*4 + ['s']*7 + ['s']*4 + ['s']*3 + ['s']*2 + ['s']*2 + ['s']*2 + ['X'] + ['s']*3
 
 ## Tinh goc giua 2 vecto
 def vAngle(v1,v2):
@@ -104,17 +110,36 @@ ws = websocket.create_connection(url,
                                  header=header,
                                  sslopt=sslopt)
 
-while True:
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+
+def animate(t):
     msg = ws.recv()
     packet = json.loads(msg.decode('utf-8'))
     data = (packet['data'])
-    with open("out.txt", 'a') as outt:
-        #outt.writelines(str(thisTime)+'\n') #thoi gian   
-        for i in range(len(data)):
-            outt.write(str(data[i]['name']) + ' ')
-            outt.write(str(data[i]['position']) + ' ')
-            outt.write(str(data[i]['dimension']) + '\n')
-            outt.write(str(vAngle(data[i]['dimension'],[1,0]))+'\n') # Tinh goc so voi Ox
-            outt.write('\n')
-    time.sleep(1)
+    ax.clear()
+    ax.xaxis.tick_top()                     # and move the X-Axis      
+    ax.set_ylim(ax.get_ylim()[::-1])   
+    ax.set_xlim(ax.get_xlim()[::1])   
+    plt.xlabel('X Coordinates')
+    plt.ylabel('Y Coordinates')
+    plt.xticks(np.arange(0, 2000, 200))
+    plt.yticks(np.arange(0, 2000, 200))
+    for i in range(len(data)):
+        name = str(data[i]['name'])
+        x = data[i]['position'][0]
+        y = data[i]['position'][1]
+        if name[:1] == "a" :
+            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
+            ax.text(x-20,y+70, "au" + name[5:], fontsize=7)
+        elif name[:1] == "m" :
+            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
+            ax.text(x-20,y+70, "man" + name[7:], fontsize=7)
+        else:
+            ax.scatter(x, y, s=40, marker=shapes[i], c=colors[i])
+            ax.text(x-15,y+70, name[7:], fontsize=6)
+    time.sleep(0.08)
     ws.send(json.dumps({'finished': True}).encode('utf-8'))
+ani = animation.FuncAnimation(fig, animate, interval=10)
+#plt.show()
+HTML(ani.to_html5_video())
