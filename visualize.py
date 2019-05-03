@@ -17,6 +17,27 @@ colors = ['red']*4 +['#bdf300']*7 + ['#5fe73a']*4 + ['#00d06a']*3 + ['#008c8b']*
 shapes = ['v']*4 + ['s']*7 + ['s']*4 + ['s']*3 + ['s']*2 + ['s']*2 + ['s']*2 + ['X'] + ['s']*3
 
 ## Tinh goc giua 2 vecto
+class Vis:
+    def init(lim,res):
+        ax.clear()
+        ax.xaxis.tick_top()                     # and move the X-Axis      
+        ax.set_ylim(ax.get_ylim()[::-1])   
+        ax.set_xlim(ax.get_xlim()[::1])   
+        plt.xlabel('X Coordinates')
+        plt.ylabel('Y Coordinates')
+        plt.xticks(np.arange(0, lim, res))
+        plt.yticks(np.arange(0, lim, res))
+    def draw(name,i,x,y):
+        if name[:1] == "a" :
+            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
+            ax.text(x-20,y+70, "au" + name[5:], fontsize=7)
+        elif name[:1] == "m" :
+            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
+            ax.text(x-20,y+70, "man" + name[7:], fontsize=7)
+        else:
+            ax.scatter(x, y, s=40, marker=shapes[i], c=colors[i])
+            ax.text(x-15,y+70, name[7:], fontsize=6)
+
 def vAngle(v1,v2):
     Ang = math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
     Ang = math.degrees(Ang)
@@ -116,27 +137,12 @@ def animate(t):
     msg = ws.recv()
     packet = json.loads(msg.decode('utf-8'))
     data = (packet['data'])
-    ax.clear()
-    ax.xaxis.tick_top()                     # and move the X-Axis      
-    ax.set_ylim(ax.get_ylim()[::-1])   
-    ax.set_xlim(ax.get_xlim()[::1])   
-    plt.xlabel('X Coordinates')
-    plt.ylabel('Y Coordinates')
-    plt.xticks(np.arange(0, 2000, 200))
-    plt.yticks(np.arange(0, 2000, 200))
+    Vis.init(2000,200)
     for i in range(len(data)):
         name = str(data[i]['name'])
         x = data[i]['position'][0]
         y = data[i]['position'][1]
-        if name[:1] == "a" :
-            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
-            ax.text(x-20,y+70, "au" + name[5:], fontsize=7)
-        elif name[:1] == "m" :
-            ax.scatter(x, y, s=50, marker=shapes[i], c=colors[i])
-            ax.text(x-20,y+70, "man" + name[7:], fontsize=7)
-        else:
-            ax.scatter(x, y, s=40, marker=shapes[i], c=colors[i])
-            ax.text(x-15,y+70, name[7:], fontsize=6)
+        Vis.draw(name,i,x,y)
     time.sleep(0.08)
     ws.send(json.dumps({'finished': True}).encode('utf-8'))
 ani = animation.FuncAnimation(fig, animate, interval=10)
