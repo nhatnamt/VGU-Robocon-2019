@@ -33,4 +33,5 @@ vector<point> smooth (const vector<point> &A, float weight_data, float weight_sm
 }
 
 int main() {
+  //vector path; path = smooth(path);
 }
