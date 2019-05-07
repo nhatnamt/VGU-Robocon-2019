@@ -23,13 +23,17 @@ PS2X ps2x;
 #define rumble      false
 
 // Motor
-#define LMotor_1      2
-#define LMotor_2      3
-#define LMotor_PWM    5
-#define RMotor_1      4
-#define RMotor_2      7
-#define RMotor_PWM    6
+const int MotorPinA[2] = {7,4};
+const int MotorPinB[2] = {8,9};
+const int MotorPWM[2] = {5,6};
 
+#define MOTORL 0
+#define MOTORR 1
+
+#define CW 1
+#define CCW 2
+#define BREAKVCC 3
+#define BREAKGND 4
 
 //right now, the library does NOT support hot pluggable controllers, meaning 
 //you must always either restart your Arduino after you connect the controller, 
@@ -38,17 +42,26 @@ PS2X ps2x;
 int error = 0;
 byte type = 0;
 byte vibrate = 0;
-int fspeed;
+int limL = 128; int limR = 128;
+int fspeedl,fspeedr,sspeed;
 bool dir,steer;
 
 void setup()
 {
  
   Serial.begin(57600);
-  delay(100);  //added delay to give wireless ps2 module some time to startup, before configuring it
+  delay(500);  //added delay to give wireless ps2 module some time to startup, before configuring it
   //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
   error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
   
+
+  // Initialize digital pins as outputs
+  for (int i=0; i<2; i++)
+  {
+    pinMode(MotorPinA[i], OUTPUT);
+    pinMode(MotorPinB[i], OUTPUT);
+    pinMode(MotorPWM[i], OUTPUT);
+  }
   if(error == 0){
     Serial.print("Found Controller, configured successful ");
     Serial.print("pressures = ");
@@ -91,35 +104,127 @@ void setup()
       break;
    }
 }
-void Motor_Control(bool LM1, bool LM2, int LP, bool RM1, bool RM2, int RP )
+void Motor_Control(int motor, int direct, int pwm )
 {
-  digitalWrite(LMotor_1, LM1);
-  digitalWrite(LMotor_2, LM2);
-  analogWrite(LMotor_PWM, LP);
-  digitalWrite(RMotor_1, RM1);
-  digitalWrite(RMotor_2, RM2);
-  analogWrite(LMotor_PWM, RP);
+  if (direct == CW)
+  {
+    digitalWrite(MotorPinA[motor],LOW);
+    digitalWrite(MotorPinB[motor],HIGH);
+  }
+  else if (direct == CCW)
+  {
+    digitalWrite(MotorPinA[motor],HIGH);
+    digitalWrite(MotorPinB[motor],LOW);
+  }
+  else if (direct == BREAKGND)
+  {
+    digitalWrite(MotorPinA[motor],LOW);
+    digitalWrite(MotorPinB[motor],LOW);
+  }
+  else 
+  {
+    digitalWrite(MotorPinA[motor],HIGH);
+    digitalWrite(MotorPinB[motor],HIGH);
+  }
+  analogWrite(MotorPWM[motor],pwm);
 }
 void loop() 
 {
-  if(error == 1) //skip loop if no controller found
+  //Motor_Control(0,CW,255);
+  if(error == 1)
     return; 
-  ps2x.read_gamepad();    //read controller 
+
+  ps2x.read_gamepad(false, vibrate);  
   Serial.println(ps2x.Analog(PSS_LY));
-  steer = 0;
- // if(ps2x.Analog(PSS_RX) >  128)
- //   steer = map(ps2x.Analog(PSS_LY), 0, 127, 255, 0);
-  if(ps2x.Analog(PSS_LY) == 127) 
-    Motor_Control(0,1,0,0,1,0);
-  if(ps2x.Analog(PSS_LY) > 127)
+  
+  if(ps2x.Button(PSB_L1))
+    limL = 255;
+  else limL = 128;
+
+  if (ps2x.Button(PSB_R1))
+    limR = 255;
+  else limR = 128;
+    
+  if(ps2x.Button(PSB_L2))
   {
-    fspeed = map(ps2x.Analog(PSS_LY), 128, 255, 0, 255);
-    Motor_Control(0,1,fspeed,0,1,fspeed);
+    Serial.println('d');
+    Motor_Control(MOTORL,CCW,limL-50);
+    Motor_Control(MOTORR,CW,limR -50);
   }
-  if(ps2x.Analog(PSS_LY) < 127)
+  else if (ps2x.Button(PSB_R2))
   {
-    fspeed = map(ps2x.Analog(PSS_LY), 0, 126, 255, 0);
-    Motor_Control(1,0,fspeed,1,0,fspeed);
+    Motor_Control(MOTORL,CW,limL-50);
+    Motor_Control(MOTORR,CCW,limR -50);
   }
-  delay(40);
+  else
+  {
+    if(ps2x.Analog(PSS_LY) == 127)
+    {
+      if (ps2x.Analog(PSS_RX) == 128)
+      {
+        Motor_Control(MOTORL,BREAKVCC,0);
+        Motor_Control(MOTORR,BREAKVCC,0);
+      }
+      else if (ps2x.Analog(PSS_RX) > 128)
+      {
+      //  Serial.println('a');
+        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR,0);
+        Motor_Control(MOTORL,CW,0);
+        Motor_Control(MOTORR,CW,sspeed);
+      }
+      else
+      {
+        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL);
+        Motor_Control(MOTORL,CW,sspeed);
+        Motor_Control(MOTORR,CW,0);
+      } 
+    } 
+
+    if(ps2x.Analog(PSS_LY) < 127)
+    {
+      fspeedl = map(ps2x.Analog(PSS_LY), 128, 255, 0, limL);
+      fspeedr = map(ps2x.Analog(PSS_LY), 128, 255, 0, limR);
+      if (ps2x.Analog(PSS_RX) == 128)
+      {
+        Motor_Control(MOTORL,CW,fspeedl);
+        Motor_Control(MOTORR,CW,fspeedr);
+      }
+      else if (ps2x.Analog(PSS_RX) > 128)
+      {
+        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR,0);
+        Motor_Control(MOTORL,CW,fspeedl-sspeed);
+        Motor_Control(MOTORR,CW,fspeedr);
+      }
+      else
+      {
+        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL);
+        Motor_Control(MOTORL,CW,fspeedl);
+        Motor_Control(MOTORR,CW,fspeedr - sspeed);
+      }  
+    }
+
+    if(ps2x.Analog(PSS_LY) > 127)
+    {
+      fspeedl = map(ps2x.Analog(PSS_LY), 0, 126, limL, 0);
+      fspeedr = map(ps2x.Analog(PSS_LY), 0, 126, limR, 0);
+      if (ps2x.Analog(PSS_RX) == 128)
+      {
+        Motor_Control(MOTORL,CCW,fspeedl);
+        Motor_Control(MOTORR,CCW,fspeedr);
+      }
+      else if (ps2x.Analog(PSS_RX) > 128)
+      {
+        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR/2,0);
+        Motor_Control(MOTORL,CCW,fspeedl-sspeed);
+        Motor_Control(MOTORR,CCW,fspeedr);
+      }
+      else
+      {
+        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL/2);
+        Motor_Control(MOTORL,CCW,fspeedl);
+        Motor_Control(MOTORR,CCW,fspeedr-sspeed);
+      }  
+    }
+  }
+  delay(50);
 }
