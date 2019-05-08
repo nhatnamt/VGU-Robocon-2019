@@ -143,7 +143,7 @@ def animate(t):
         x = data[i]['position'][0]
         y = data[i]['position'][1]
         Vis.draw(name,i,x,y)
-    time.sleep(0.08)
+    time.sleep(0.01)
     ws.send(json.dumps({'finished': True}).encode('utf-8'))
 ani = animation.FuncAnimation(fig, animate, interval=10)
 plt.show()
