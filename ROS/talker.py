@@ -6,7 +6,6 @@ import urllib.request
 import rospy
 import websocket
 from pathlib import Path
-from collections import namedtuple
 from std_msgs.msg import String
 
 def makeSSLContext(ca, crt, key):
@@ -34,12 +33,6 @@ def getToken(url, username, password, ca, crt, key):
     respBody = resp.read()
     respBodyJSON = json.loads(respBody.decode('utf-8'))
     return respBodyJSON["token"]
-
-def _json_object_hook(d): 
-    return namedtuple('X', d.keys())(*d.values())
-
-def json2obj(data): 
-    return json.loads(data, object_hook=_json_object_hook)
 
 if __name__ == '__main__':
     try:
