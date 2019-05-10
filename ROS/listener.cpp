@@ -4,20 +4,23 @@
 using namespace ros;
 using namespace std;
 
+typedef pair<float, float> point;
 typedef pair <int, int> coordinates;
 typedef pair <double, pair <coordinates, coordinates>> heap_data;
 
 const string myautobot = "auto_1"; /// our autobot name from server data
 const string opmanualbot = "manual_2"; /// opponent's manualbot name from server data
-const int x_bound = 1000; /// contest bounds: 300
-const int y_bound = 1000; /// contest bounds: 300
+const int x_bound = 300; /// contest bounds: 300
+const int y_bound = 300; /// contest bounds: 300
 const int dir_to_storage = -1; /// -1: storage in left side; 1: storage in right side
 const int safe_radius = 15; /// safe radius from the center point of the object
 const int Yeps = 5; /// Y-coor epsilon to push object
 const bool debug_mode = false; /// true to watch progress
+int counter = 0;
 
 coordinates autobot, manualbot; /// auto bot from our team, manual bot from opponent's team
 vector <coordinates> object;
+vector <point> path;
 bool locked[x_bound + 15][y_bound + 15];
 char matrix[x_bound + 15][y_bound + 15];
 coordinates trace[x_bound + 15][y_bound + 15];
@@ -32,6 +35,8 @@ bool pushable(coordinates pos) {
     return check1 & check2;
 }
 
+int sqr(int x) {return x * x;}
+
 bool object_clear(coordinates a, coordinates b) {
     for (coordinates obj: object) {
         double AOx = obj.first - a.first;
@@ -45,23 +50,22 @@ bool object_clear(coordinates a, coordinates b) {
     return true;
 }
 
-double heuristic(int X, int Y) {
-    double h = 1500000; /// just random big number
+int heuristic(int X, int Y) {
+    int h = 1e9; /// just random big number
     for (coordinates obj: object)
-        h = min(h, X + hypot(X - obj.first, Y - obj.second));
+        h = min(h, sqr(obj.first) + sqr(X - obj.first) + sqr(Y - obj.second));
     return h;
 }
 
-int sqr(int x) {return x * x;}
-
 void push_object(coordinates pos) {
-    cerr << safe_radius * 2 << ' ' << pos.second << '\n';
+    cout << safe_radius * 2 << ' ' << pos.second << '\n';
 }
 
 void trace_path(coordinates pos) {
     if (pos.first == -1) return;
     trace_path(trace[pos.first][pos.second]);
-    cerr << pos.first << ' ' << pos.second << '\n';
+    path.push_back(point(pos.first*1.0, pos.second*1.0));
+    cout << pos.first << ' ' << pos.second << '\n';
 }
 
 void panic_plan() {
@@ -98,8 +102,7 @@ void A_star() {
 
         if (pushable(cur)) {
             if (debug_mode) cerr << "path found\n";
-            trace_path(cur); 
-            push_object(cur);
+            trace_path(cur); push_object(cur);
             if (debug_mode) cerr << "output done\n";
             return;
         }
@@ -112,9 +115,41 @@ void A_star() {
     panic_plan();
 }
 
+// vector<point> smooth (const vector<point> &A, float weight_data, float weight_smooth, float tolerance) {
+//   // HYPERPARAMETER 
+//   // weight_data = 0.5
+//   // weight_smooth = 0.1
+//   // tolerance = 0.000001
+//   vector<point> P = A;
+//   float df = tolerance;
+//   while (df >= tolerance) {
+//     df = 0.0;
+//     for (int i = 1; i < (int)P.size() - 1; ++i) {
+//       float x, y, yPrev, yNext, ty;
+      
+//       x = A[i].first;
+//       y = P[i].first, yPrev = P[i - 1].first, yNext = P[i + 1].first;
+//       ty = y;
+//       y += weight_data * (x - y) + weight_smooth * (yPrev + yNext - 2.0 * y);
+//       P[i].first = y;
+//       df += fabs(ty - y);
+
+//       x = A[i].second;
+//       y = P[i].second, yPrev = P[i - 1].second, yNext = P[i + 1].second;
+//       ty = y;
+//       y += weight_data * (x - y) + weight_smooth * (yPrev + yNext - 2.0 * y);
+//       P[i].second = y;
+//       df += fabs(ty - y);
+//     }
+//   }
+//   return P;
+// }
+
+// void pathReprocessing() {
+// }
+
 void calculate(const std_msgs::String::ConstPtr& msg)
 {
-  object.clear();
   string test = msg->data;
   string buffer = "";
   for (int i = 0; i < (int)test.size(); ++i) {
@@ -125,58 +160,32 @@ void calculate(const std_msgs::String::ConstPtr& msg)
   }
   stringstream input(buffer);
   string dim, name, nameBot, pos;
+  // ofstream output("/home/khanh/catkin_ws/src/beginner_tutorials/src/state.txt");
   int dx, dy, x, y;
   for (int i = 0; i < 3; ++i) input >> name;
+  object.clear();
   for (int i = 0; i < 28; ++i) {
     input >> dim >> dx >> dy >> name >> nameBot >> pos >> x >> y;
-    //cerr << "Dimension: " << dx << ' ' << dy << '\n';
-    //cerr << "Name: " << nameBot << '\n';
-    //cerr << "Position: " << x << ' ' << y << '\n';
-    //cerr << '\n';
-    x = min(300, x);
-    y = min(300, y);
+    // output << nameBot << ' ' << x << ' ' << y << '\n';
+    // srand(time(NULL));
+    // if (x>300) x=rand()%200+15;
+    // if (y>300) y=rand()%200+15;
     if (nameBot == myautobot) autobot = make_pair(x, y);
       else if (nameBot == opmanualbot) manualbot = make_pair(x, y);
-        else if (nameBot[0] == 'o') object.push_back(make_pair(x, y));
+        else if (nameBot[0] == 'o' && x <= x_bound && y <= y_bound) object.push_back(make_pair(x, y));
   }
+  //cerr << '\n';
   A_star();
+  //cerr << "~~~~~~~~~~~~~~~~~~ " << ++counter << '\n';
+
+  // pathReprocessing();
 }
 
 int main(int argc, char **argv)
 {
   init(argc, argv, "listener");
   NodeHandle n;
-  Subscriber sub = n.subscribe("chatter", 3, calculate);
+  Subscriber sub = n.subscribe("chatter", 10, calculate);
   spin();
   return 0;
 }
-
-//{"time": 1557486887879241501, "data": 
-//[{"dimension": [-20, -30], "name": "manual_1", "position": [1190, 292]},
-// {"dimension": [-39, -49], "name": "auto_1", "position": [470, 992]}, 
-// {"dimension": [26, 0], "name": "manual_2", "position": [190, 842]}, 
-// {"dimension": [15, -20], "name": "auto_2", "position": [305, 306]}, 
-// {"dimension": [-36, -70], "name": "object_1", "position": [571, 1353]}, 
-// {"dimension": [51, 41], "name": "object_2", "position": [1173, 686]}, 
-// {"dimension": [-13, 24], "name": "object_3", "position": [986, 457]}, 
-// {"dimension": [26, 6], "name": "object_4", "position": [1131, 84]}, 
-// {"dimension": [25, -69], "name": "object_5", "position": [109, 609]}, 
-// {"dimension": [32, -3], "name": "object_6", "position": [1150, 1226]}, 
-// {"dimension": [-9, 6], "name": "object_7", "position": [601, 738]}, 
-// {"dimension": [-29, 60], "name": "object_8", "position": [346, 494]}, 
-// {"dimension": [-37, 21], "name": "object_9", "position": [742, 1227]}, 
-// {"dimension": [-41, 21], "name": "object_10", "position": [259, 795]}, 
-// {"dimension": [87, -62], "name": "object_11", "position": [312, 170]}, 
-// {"dimension": [26, 42], "name": "object_12", "position": [66, 244]}, 
-// {"dimension": [57, -6], "name": "object_13", "position": [886, 985]}, 
-// {"dimension": [-79, -83], "name": "object_14", "position": [1364, 291]}, 
-// {"dimension": [-28, -59], "name": "object_15", "position": [1128, 1021]}, 
-// {"dimension": [-83, -46], "name": "object_16", "position": [160, 902]}, 
-// {"dimension": [-68, -60], "name": "object_17", "position": [1056, 523]}, 
-// {"dimension": [1, -69], "name": "object_18", "position": [312, 973]}, 
-// {"dimension": [30, 29], "name": "object_19", "position": [439, 408]}, 
-// {"dimension": [71, 38], "name": "object_20", "position": [801, 212]}, 
-// {"dimension": [-68, -48], "name": "object_21", "position": [683, 47]}, 
-// {"dimension": [58, 73], "name": "object_22", "position": [318, 279]}, 
-// {"dimension": [-52, 84], "name": "object_23", "position": [884, 602]},
-// {"dimension": [-6, -83], "name": "object_24", "position": [1072, 534]}]}
