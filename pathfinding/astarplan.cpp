@@ -21,18 +21,16 @@ char matrix[x_bound + 15][y_bound + 15];
 coordinates trace[x_bound + 15][y_bound + 15];
 
 void get_data() {
-    do {
-        string s, name = ""; getline(cin, s);
-        if (s == "") return;
-        int i = 0, x = 0, y = 0;
-        for (; s[i] != ' '; name += s[i++]);
-        for (i += 2; s[i] != ','; x = x * 10 + (s[i++] - 48));
-        for (i += 2; s[i] != ']'; y = y * 10 + (s[i++] - 48));
+    string name; int x, y;
+    while (cin >> name >> x >> y)
         if (name == myautobot) autobot = make_pair(x, y);
         else if (name == opmanualbot) manualbot = make_pair(x, y);
-        else if (name[0] == 'o') object.push_back(make_pair(x, y));
-        getline(cin, s); getline(cin, s);
-    } while ("robocon" != "easy");
+        else if (name[0] == 'o' && x <= x_bound && y <= y_bound) object.push_back(make_pair(x, y));
+
+//    cerr << autobot.first << ' ' << autobot.second << '\n';
+//    for (coordinates obj: object)
+//        cerr << obj.first << ' ' << obj.second << '\n';
+//    cerr << "-----\n";
 }
 
 bool pushable(coordinates pos) {
@@ -44,6 +42,8 @@ bool pushable(coordinates pos) {
     }
     return check1 & check2;
 }
+
+int sqr(int x) {return x * x;}
 
 bool object_clear(coordinates a, coordinates b) {
     for (coordinates obj: object) {
@@ -58,14 +58,12 @@ bool object_clear(coordinates a, coordinates b) {
     return true;
 }
 
-double heuristic(int X, int Y) {
-    double h = 1500000; /// just random big number
+int heuristic(int X, int Y) {
+    int h = 1e9; /// just random big number
     for (coordinates obj: object)
-        h = min(h, X + hypot(X - obj.first, Y - obj.second));
+        h = min(h, sqr(obj.first) + sqr(X - obj.first) + sqr(Y - obj.second));
     return h;
 }
-
-int sqr(int x) {return x * x;}
 
 void push_object(coordinates pos) {
     cout << safe_radius * 2 << ' ' << pos.second << '\n';
