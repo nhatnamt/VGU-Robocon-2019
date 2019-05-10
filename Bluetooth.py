@@ -60,7 +60,7 @@ def sendSignal(input):
 serconnect()
 while True:
     sendSignal(1)
-    time.sleep(1)
+    time.sleep(0.2)
     sendSignal(0)
-    time.sleep(1)
+    time.sleep(0.2)
 

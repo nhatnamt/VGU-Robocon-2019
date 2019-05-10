@@ -135,23 +135,32 @@ void loop()
     return; 
 
   ps2x.read_gamepad(false, vibrate);  
-  Serial.println(ps2x.Analog(PSS_LY));
+  Serial.print(ps2x.Analog(PSS_LY));
   
-  if(ps2x.Button(PSB_L1))
+
+  if (ps2x.Button(PSB_L3))
+  {
+    limR = 64;
+    limL = 64;
+  }
+  else
+  {
+    if(ps2x.Button(PSB_L1))
     limL = 255;
   else limL = 128;
 
   if (ps2x.Button(PSB_R1))
     limR = 255;
   else limR = 128;
-    
-  if(ps2x.Button(PSB_L2))
+  }
+  
+
+  if(ps2x.Button(PSB_R2))
   {
-    Serial.println('d');
     Motor_Control(MOTORL,CCW,limL-50);
     Motor_Control(MOTORR,CW,limR -50);
   }
-  else if (ps2x.Button(PSB_R2))
+  else if (ps2x.Button(PSB_L2))
   {
     Motor_Control(MOTORL,CW,limL-50);
     Motor_Control(MOTORR,CCW,limR -50);
@@ -167,14 +176,13 @@ void loop()
       }
       else if (ps2x.Analog(PSS_RX) > 128)
       {
-      //  Serial.println('a');
-        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR,0);
+        sspeed = map(ps2x.Analog(PSS_RX),255,128,limR,0);
         Motor_Control(MOTORL,CW,0);
         Motor_Control(MOTORR,CW,sspeed);
       }
       else
       {
-        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL);
+        sspeed = map(ps2x.Analog(PSS_RX),128,0,0,limL);
         Motor_Control(MOTORL,CW,sspeed);
         Motor_Control(MOTORR,CW,0);
       } 
@@ -182,8 +190,8 @@ void loop()
 
     if(ps2x.Analog(PSS_LY) < 127)
     {
-      fspeedl = map(ps2x.Analog(PSS_LY), 128, 255, 0, limL);
-      fspeedr = map(ps2x.Analog(PSS_LY), 128, 255, 0, limR);
+      fspeedl = map(ps2x.Analog(PSS_LY), 127, 0, 0, limL);
+      fspeedr = map(ps2x.Analog(PSS_LY), 127, 0, 0, limR);
       if (ps2x.Analog(PSS_RX) == 128)
       {
         Motor_Control(MOTORL,CW,fspeedl);
@@ -191,13 +199,13 @@ void loop()
       }
       else if (ps2x.Analog(PSS_RX) > 128)
       {
-        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR,0);
+        sspeed = map(ps2x.Analog(PSS_RX),255,128,limR,0);
         Motor_Control(MOTORL,CW,fspeedl-sspeed);
         Motor_Control(MOTORR,CW,fspeedr);
       }
       else
       {
-        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL);
+        sspeed = map(ps2x.Analog(PSS_RX),128,0,0,limL);
         Motor_Control(MOTORL,CW,fspeedl);
         Motor_Control(MOTORR,CW,fspeedr - sspeed);
       }  
@@ -205,8 +213,9 @@ void loop()
 
     if(ps2x.Analog(PSS_LY) > 127)
     {
-      fspeedl = map(ps2x.Analog(PSS_LY), 0, 126, limL, 0);
-      fspeedr = map(ps2x.Analog(PSS_LY), 0, 126, limR, 0);
+      fspeedl = map(ps2x.Analog(PSS_LY), 127, 255, 0, limL);
+      fspeedr = map(ps2x.Analog(PSS_LY), 127, 255, 0, limR);
+      Serial.print(' '); Serial.println('sspeed');
       if (ps2x.Analog(PSS_RX) == 128)
       {
         Motor_Control(MOTORL,CCW,fspeedl);
@@ -214,13 +223,13 @@ void loop()
       }
       else if (ps2x.Analog(PSS_RX) > 128)
       {
-        sspeed = map(ps2x.Analog(PSS_RX),0,127,limR/2,0);
+        sspeed = map(ps2x.Analog(PSS_RX),128,255,0,limR/2);
         Motor_Control(MOTORL,CCW,fspeedl-sspeed);
         Motor_Control(MOTORR,CCW,fspeedr);
       }
       else
       {
-        sspeed = map(ps2x.Analog(PSS_RX),129,255,0,limL/2);
+        sspeed = map(ps2x.Analog(PSS_RX),0,127,0,limL/2);
         Motor_Control(MOTORL,CCW,fspeedl);
         Motor_Control(MOTORR,CCW,fspeedr-sspeed);
       }  
