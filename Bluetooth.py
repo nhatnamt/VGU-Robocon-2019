@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-
 import json
 from math import *
 import time
 import serial
 
+CW = 1
+CWW = 2
 def serconnect():
     #Chọn Baudrate và Port kết nối
     global ser
@@ -23,23 +24,17 @@ def serconnect():
     #Thời gian chờ khởi động kết nối
     time.sleep(3)
 
-def sendSignal(input):
+def sendSignal(sendStr):
     global ser
     port = "/dev/rfcomm0"
     b_rate = 115200
     while(True):
-        """ Xử lý mất kết nối giữa trận """
         try:
             if(ser == None):
                 ser = serial.Serial(port, baudrate = b_rate, timeout=1, write_timeout = 1)
                 print("Reconnecting")
             #Gửi dữ liệu tới Robot
-            ser.write(str(input).encode())
-            time.sleep(0.2)
-            #Đọc dữ liệu (nếu có)
-            data = ser.readline().decode()
-            print("Writing Data...")
-            print("Data: "+ data)
+            ser.write(sendStr.encode('utf-8')) 
             break
         #Giải quyết việc mất kết nối
         except serial.SerialTimeoutException:
@@ -59,8 +54,19 @@ def sendSignal(input):
 
 serconnect()
 while True:
-    sendSignal(1)
+    pwmL = 255 
+    dirL = 1
+    pwmR = 255  
+    dirR = 1
+    sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
+    sendSignal(sig)
+    print(sig)
     time.sleep(1)
-    sendSignal(0)
+    pwmL = 0 
+    dirL = 1
+    pwmR = 0  
+    dirR = 1
+    sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
+    sendSignal(sig)
     time.sleep(1)
 
