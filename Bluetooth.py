@@ -5,7 +5,9 @@ import time
 import serial
 
 CW = 1
-CWW = 2
+CCW = 2
+kp = 0
+kd = 0
 def serconnect():
     #Chọn Baudrate và Port kết nối
     global ser
@@ -53,20 +55,42 @@ def sendSignal(sendStr):
             time.sleep(1)
 
 serconnect()
+lasterror = 0
+def PID(errors):
+    pTerm = errors * kp
+    dTerm = (error - lasterror) * kd
+    
+
+pwmL = 220
+dirL = 1
+pwmR = 255  
+dirR = 1
+sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
+sendSignal(sig)
+print(sig)
+time.sleep(3.2)
+pwmL = 0 
+dirL = 3
+pwmR = 0  
+dirR = 3
+sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
+sendSignal(sig)
+print(sig)
+time.sleep(5)
 while True:
-    pwmL = 255 
+    pwmL = 200
     dirL = 1
-    pwmR = 255  
+    pwmR = 235  
     dirR = 1
     sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
     sendSignal(sig)
     print(sig)
-    time.sleep(1)
-    pwmL = 0 
-    dirL = 1
-    pwmR = 0  
-    dirR = 1
+    time.sleep(0.8)
+    pwmL = 200 #200
+    dirL = 2
+    pwmR = 235  #235
+    dirR = 2
     sig = "<" + str(dirL) + "," + str(pwmL) + "," + str(dirR) + "," + str(pwmR) + ">"
     sendSignal(sig)
-    time.sleep(1)
-
+    print(sig)
+    time.sleep(0.8)

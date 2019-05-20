@@ -49,10 +49,10 @@ void setup() {
 //=============
 
 void loop() {
- getDataFromPC();
- Motor_Control(0,dirL,pwmL);
- Motor_Control(1,dirR,pwmR);
-  replyToPC();
+ //getDataFromPC();
+ Motor_Control(0,1,255);
+ Motor_Control(1,1,255);
+ // replyToPC();
 }
 
 //=============
